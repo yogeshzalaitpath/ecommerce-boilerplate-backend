@@ -1,11 +1,11 @@
-const errorHandler = (err, req, res, next) => {
-  const statusCode = err.status || 500;
-  const errorMessage = err.message || "Internal Server Error";
-
-  return res.status(statusCode).json({
-    status: "ERROR",
-    message: errorMessage,
-  });
+const asyncErrorHandler = (fn) => {
+  return async (req, res, next) => {
+    try {
+      await fn(req, res, next);
+    } catch (error) {
+      return next(error);
+    }
+  };
 };
 
-module.exports = errorHandler;
+module.exports = asyncErrorHandler;
