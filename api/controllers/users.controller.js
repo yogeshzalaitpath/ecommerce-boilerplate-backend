@@ -65,60 +65,52 @@ exports.signIn = asyncErrorHandler(async (req, res, next) => {
 });
 
 exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
-  const { search,limit,page } = req.query;
-  console.log('limit', limit)
+  const { search, limit, page } = req.query;
+  console.log("limit", limit);
+  console.log("page", page);
 
-  const parsedLimit = parseInt(limit, 10); // Parse limit as an integer with base 10
-  const parsedPage= parseInt(page,10)
+  const parsedLimit = parseInt(limit) || 10;
+  const parsedPage = parseInt(page) || 1
   if (isNaN(parsedLimit) || parsedLimit <= 0) {
-    // Handle invalid limit parameter
-    return res.status(400).json({ error: 'Invalid limit parameter' });
+    return next(BadRequest("Invalid limit parameter!"));
   }
-
   const offset = (parsedPage - 1) * parsedLimit;
-  if (search) {
-    try {
-      const searchTerms = search.split(" ");
-      console.log("searchTerms", searchTerms);
-      const users = await Users.findAll({
-        limit:parsedLimit,
-        offset:offset,
-        where: {
-          [Op.and]: [
-            { role: "user" }, 
-            {
-              [Op.or]: [
-                {
-                  [Op.or]: [
-                    { first_name: { [Op.like]: `%${searchTerms[0]}%` } }, 
-                    { last_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
-                  ],
-                },
-                {
-                  [Op.or]: [
-                    { first_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
-                    { last_name: { [Op.like]: `%${searchTerms[0]}%` } }, 
-                  ],
-                },
-                { email: { [Op.like]: `${search}%` } }, 
-                { mobile: { [Op.like]: `${search}%` } },
-              ],
-            },
-          ],
-        },
-        
-      });
+  try {
+    const searchTerms = search?.split(" ");
+    const { rows: users, count: totalUsers } = await Users.findAndCountAll({
+      limit: parsedLimit,
+      offset:offset,
+      attributes: {
+        exclude: ["password"],
+      },
+      where: {
+        [Op.and]: [
+          { role: "user" },
+          {
+            [Op.or]: [
+              {
+                [Op.or]: [
+                  { first_name: { [Op.like]: `%${searchTerms[0]}%` } },
+                  { last_name: { [Op.like]: `%${searchTerms[1]}%` } },
+                ],
+              },
+              {
+                [Op.or]: [
+                  { first_name: { [Op.like]: `%${searchTerms[1]}%` } },
+                  { last_name: { [Op.like]: `%${searchTerms[0]}%` } },
+                ],
+              },
+              { email: { [Op.like]: `${search}%` } },
+              { mobile: { [Op.like]: `${search}%` } },
+            ],
+          },
+        ],
+      },
+    });
 
-      const usersWithoutPassword = users.map((user) => {
-        const userWithoutPassword = { ...user.get() };
-        delete userWithoutPassword.password;
-        return userWithoutPassword;
-      });
-
-      return successResponse(res, { data: { users: usersWithoutPassword } });
-    } catch (error) {
-      return next(error);
-    }
+    return successResponse(res, { data: { users, totalUsers } });
+  } catch (error) {
+    return next(error);
   }
 });
 

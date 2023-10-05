@@ -5,6 +5,9 @@ const { verifyToken } = require("../helpers/jwt.helper");
 
 const userAuth = asyncErrorHandler(async (req, res, next) => {
   const authHeader = req.header("Authorization");
+  if(!authHeader){
+    return next(UnAuthorized());
+  }
   const token = authHeader.replace("Bearer ", "");
 
   const decodedToken = verifyToken(token);
