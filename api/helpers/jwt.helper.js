@@ -3,7 +3,7 @@ const secretKey = process.env.JWT_SECRET_KEY;
 
 const generateToken = (user) => {
   try {
-    const token = jwt.sign({ id: user._id }, secretKey);
+    const token = jwt.sign({ id: user.id, role: user.role }, secretKey);
     return token;
   } catch (error) {
     return error;

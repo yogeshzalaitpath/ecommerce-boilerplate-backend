@@ -1,86 +1,63 @@
-const { Users } = require("../models"); // Import your Mongoose User model
-// const { AlreadyExist, asyncErrorHandler, hashPassword } = require('path/to/your/utils'); // Import necessary utilities
-const { AlreadyExist } = require("../helpers/customErrorHandler.helper");
-const { hashPassword } = require("../helpers/bcrypt.helper");
-const asyncErrorHandler = require("../middlewares/asyncErrorHandler.middleware");
-const { where } = require("sequelize");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const secretKey = process.env.JWT_SECRET_KEY;
+const { Users } = require("../models");
 
-const signUp = asyncErrorHandler(async (req, res, next) => {
+const asyncErrorHandler = require("../middlewares/asyncErrorHandler.middleware");
+
+const {
+  AlreadyExist,
+  BadRequest,
+  NotFound,
+} = require("../helpers/customErrorHandler.helper");
+const { hashPassword, comparePassword } = require("../helpers/bcrypt.helper");
+const { capitalizeFirstLetter } = require("../helpers/global.helper");
+const { generateToken } = require("../helpers/jwt.helper");
+const { ROLES } = require("../utils/constant");
+
+exports.signUp = asyncErrorHandler(async (req, res, next) => {
   const { first_name, last_name, email, password, role } = req.body;
 
-  // Check if the user already exists
-  const existingUser = await Users.findOne({ where: { email: email } });
-
+  const existingUser = await Users.findOne({
+    where: { email: email.toLowerCase() },
+  });
   if (existingUser) {
-    return next(AlreadyExist("User already exists!"));
+    return next(AlreadyExist("User already exists !"));
   }
 
-  // Hash the password
   const hashedPassword = await hashPassword(password);
 
-  // Create a new user object
-  const user = new Users({
-    first_name,
-    last_name,
+  await Users.create({
+    first_name: capitalizeFirstLetter(first_name),
+    last_name: capitalizeFirstLetter(last_name),
     email: email.toLowerCase(),
     password: hashedPassword,
     role,
   });
 
-  // Save the user to the database
-  await user.save();
-
-  return successResponse(
-    res,
-    { message: "User registered successfully!" },
-    201
-  );
+  return successResponse(res, { message: "Sign up successful !" }, 201);
 });
 
-// const deleteRow = asyncErrorHandler(async(req,res,next)=>{
-//   const count = await  Users.destroy({ where: { id: 2 } });
-//   console.log('count', count)
-// })
+exports.signIn = asyncErrorHandler(async (req, res, next) => {
+  const { email, password } = req.body;
 
-// Utility function for sending success response
-function successResponse(res, data, status = 200) {
-  return res.status(status).json(data);
-}
-
-const signIn = asyncErrorHandler(async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    const data = { email, password };
-    console.log(data);
-
-    if (!email || !password) {
-      return res.status(401).send("all fields are required");
-    }
-
-    const user = await Users.findOne({ where: { email: email } });
-    if (user) {
-      const passwordMatch = await bcrypt.compare(password, user.password);
-      if (passwordMatch) {
-        console.log("login successful");
-
-        jwt.sign({ user }, secretKey, { expiresIn: "300s" }, (err, token) => {
-          if (err) {
-            return next(err);
-          }
-          res.json({ token });
+  const user = await Users.findOne({ where: { email: email.toLowerCase() } });
+  if (user) {
+    if (user.password) {
+      const isValidPassword = await comparePassword(password, user.password);
+      if (isValidPassword) {
+        const jwtToken = generateToken(user);
+        delete user.dataValues.password;
+        if (user.role === ROLES.ADMIN) {
+          delete user.dataValues.mobile;
+          delete user.dataValues.address;
+        }
+        return successResponse(res, {
+          message: "Sign in successful !",
+          data: { user, token: jwtToken },
         });
-      } else {
-        return res.status(401).json({ Password: "incorrect password" });
       }
+      return next(BadRequest("Incorrect password !"));
     } else {
-      return res.status(401).json({ Email: "user not found" });
+      if (!user.password) return next(BadRequest("Incorrect password !"));
     }
-  } catch (error) {
-    return next(error);
   }
+  return next(NotFound("User doesn't exist !"));
 });
-
-module.exports = { signUp, signIn };

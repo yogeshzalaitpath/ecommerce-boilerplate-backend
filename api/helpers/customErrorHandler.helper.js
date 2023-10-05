@@ -22,7 +22,7 @@ customErrorHandler.Forbidden = (
 };
 
 customErrorHandler.NotFound = (message) => {
-  return customErrorHandler(404, message);
+  return customErrorHandler(404, message );
 };
 
 customErrorHandler.AlreadyExist = (message) => {

@@ -1,6 +1,6 @@
 const successResponse = (res, { data, message } = {}, statusCode = 200) => {
   const response = {
-    status: "SUCCESS",
+    success: 1,
     message,
     data,
   };
