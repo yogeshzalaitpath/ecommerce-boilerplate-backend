@@ -65,12 +65,24 @@ exports.signIn = asyncErrorHandler(async (req, res, next) => {
 });
 
 exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
-  const { search } = req.query;
+  const { search,limit,page } = req.query;
+  console.log('limit', limit)
+
+  const parsedLimit = parseInt(limit, 10); // Parse limit as an integer with base 10
+  const parsedPage= parseInt(page,10)
+  if (isNaN(parsedLimit) || parsedLimit <= 0) {
+    // Handle invalid limit parameter
+    return res.status(400).json({ error: 'Invalid limit parameter' });
+  }
+
+  const offset = (parsedPage - 1) * parsedLimit;
   if (search) {
     try {
       const searchTerms = search.split(" ");
       console.log("searchTerms", searchTerms);
       const users = await Users.findAll({
+        limit:parsedLimit,
+        offset:offset,
         where: {
           [Op.and]: [
             { role: "user" }, 
@@ -79,13 +91,13 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
                 {
                   [Op.or]: [
                     { first_name: { [Op.like]: `%${searchTerms[0]}%` } }, 
-                    { first_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
+                    { last_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
                   ],
                 },
                 {
                   [Op.or]: [
+                    { first_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
                     { last_name: { [Op.like]: `%${searchTerms[0]}%` } }, 
-                    { last_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
                   ],
                 },
                 { email: { [Op.like]: `${search}%` } }, 
@@ -94,6 +106,7 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
             },
           ],
         },
+        
       });
 
       const usersWithoutPassword = users.map((user) => {
