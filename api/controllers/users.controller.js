@@ -64,94 +64,37 @@ exports.signIn = asyncErrorHandler(async (req, res, next) => {
   return next(NotFound("User doesn't exist !"));
 });
 
-// exports.getUsersByRole = asyncErrorHandler(async (req, res, next) => {
-//   try {
-//     const users = await Users.findAll({
-//       where: {
-//         role: "user",
-//       },
-//     });
-
-//     if (users.length === 0) {
-//       return next(NotFound("No users with role 'user' found"));
-//     }
-
-//     const usersWithoutPassword = users.map((user) => {
-//       const userWithoutPassword = { ...user.get() };
-//       delete userWithoutPassword.password;
-//       return userWithoutPassword;
-//     });
-
-//     return res.json({ users: usersWithoutPassword });
-//   } catch (error) {
-//     return next(error);
-//   }
-// });
-
-
-// exports.searchUsers = asyncErrorHandler(async (req, res, next) => {
-//   const { name } = req.query; // Change the query parameter name to a more general one, like "name"
-//   if (!name) {
-//     return next(BadRequest("Name parameter is required"));
-//   }
-  
-//   const nameEscape = escapeRegex(name);
-//   try {
-//     const users = await Users.findAll({
-//       where: {
-//         [Op.or]: [
-//           { first_name: nameEscape },
-//           { last_name: nameEscape },
-//           { email: name },
-//           { mobile: nameEscape },
-//         ],
-//       },
-//     });
-
-//     if (users.length === 0) {
-//       return next(NotFound("No user found!"));
-//     }
-//     return successResponse(res, { data: { users } });
-//   } catch (error) {
-//     return next(error);
-//   }
-// });
-
 exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
   const { search } = req.query;
-
   if (search) {
-    const searchEscape = escapeRegex(search);
     try {
+      const searchTerms = search.split(" ");
+      console.log("searchTerms", searchTerms);
       const users = await Users.findAll({
         where: {
-          [Op.or]: [
-            { first_name: searchEscape },
-            { last_name: searchEscape },
-            { email: search },
-            { mobile: searchEscape },
+          [Op.and]: [
+            { role: "user" }, 
+            {
+              [Op.or]: [
+                {
+                  [Op.or]: [
+                    { first_name: { [Op.like]: `${searchTerms[0]}%` } }, // Starts with first search term in first_name
+                    { first_name: { [Op.like]: `${searchTerms[1]}%` } }, // Starts with second search term in first_name
+                  ],
+                },
+                {
+                  [Op.or]: [
+                    { last_name: { [Op.like]: `${searchTerms[0]}%` } }, // Starts with first search term in last_name
+                    { last_name: { [Op.like]: `${searchTerms[1]}%` } }, // Starts with second search term in last_name
+                  ],
+                },
+                { email: { [Op.like]: `${search}%` } }, 
+                { mobile: { [Op.like]: `${search}%` } },
+              ],
+            },
           ],
         },
       });
-      if (users.length === 0) {
-        return next(NotFound("No user found!"));
-      }
-      return successResponse(res, { data: { users } });
-    } catch (error) {
-      return next(error);
-    }
-  } else {
-    // Fetch users by role "user"
-    try {
-      const users = await Users.findAll({
-        where: {
-          role: "user",
-        },
-      });
-
-      if (users.length === 0) {
-        return next(NotFound("No users with role 'user' found"));
-      }
 
       const usersWithoutPassword = users.map((user) => {
         const userWithoutPassword = { ...user.get() };
@@ -159,13 +102,12 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
         return userWithoutPassword;
       });
 
-      return res.json({ users: usersWithoutPassword });
+      return successResponse(res, { data: { users: usersWithoutPassword } });
     } catch (error) {
       return next(error);
     }
   }
 });
-
 
 exports.deleteUser = asyncErrorHandler(async (req, res, next) => {
   try {
