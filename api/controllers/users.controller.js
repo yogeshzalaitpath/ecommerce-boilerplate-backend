@@ -78,14 +78,14 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
               [Op.or]: [
                 {
                   [Op.or]: [
-                    { first_name: { [Op.like]: `${searchTerms[0]}%` } }, // Starts with first search term in first_name
-                    { first_name: { [Op.like]: `${searchTerms[1]}%` } }, // Starts with second search term in first_name
+                    { first_name: { [Op.like]: `%${searchTerms[0]}%` } }, 
+                    { first_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
                   ],
                 },
                 {
                   [Op.or]: [
-                    { last_name: { [Op.like]: `${searchTerms[0]}%` } }, // Starts with first search term in last_name
-                    { last_name: { [Op.like]: `${searchTerms[1]}%` } }, // Starts with second search term in last_name
+                    { last_name: { [Op.like]: `%${searchTerms[0]}%` } }, 
+                    { last_name: { [Op.like]: `%${searchTerms[1]}%` } }, 
                   ],
                 },
                 { email: { [Op.like]: `${search}%` } }, 
