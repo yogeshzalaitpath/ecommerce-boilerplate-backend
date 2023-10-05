@@ -5,6 +5,7 @@ const validate = require("../middlewares/validator-error.middleware");
 const usersValidation = require("../validations/users.validation");
 
 const usersController = require("../controllers/users.controller");
+const userAuth = require("../middlewares/userAuth.middleware");
 
 router
   .route("/sign-up")
@@ -12,5 +13,5 @@ router
 router
   .route("/sign-in")
   .post(validate(usersValidation.signIn), usersController.signIn);
-
+router.route("/").get(userAuth,usersController.getAllUsers);
 module.exports = router;

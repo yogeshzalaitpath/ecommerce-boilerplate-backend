@@ -9,8 +9,10 @@ const {
 } = require("../helpers/customErrorHandler.helper");
 const { hashPassword, comparePassword } = require("../helpers/bcrypt.helper");
 const { capitalizeFirstLetter } = require("../helpers/global.helper");
+const { where, Op } = require("sequelize");
 const { generateToken } = require("../helpers/jwt.helper");
 const { ROLES } = require("../utils/constant");
+const { escapeRegex } = require("../helpers/global.helper");
 
 exports.signUp = asyncErrorHandler(async (req, res, next) => {
   const { first_name, last_name, email, password, role } = req.body;
@@ -60,4 +62,123 @@ exports.signIn = asyncErrorHandler(async (req, res, next) => {
     }
   }
   return next(NotFound("User doesn't exist !"));
+});
+
+// exports.getUsersByRole = asyncErrorHandler(async (req, res, next) => {
+//   try {
+//     const users = await Users.findAll({
+//       where: {
+//         role: "user",
+//       },
+//     });
+
+//     if (users.length === 0) {
+//       return next(NotFound("No users with role 'user' found"));
+//     }
+
+//     const usersWithoutPassword = users.map((user) => {
+//       const userWithoutPassword = { ...user.get() };
+//       delete userWithoutPassword.password;
+//       return userWithoutPassword;
+//     });
+
+//     return res.json({ users: usersWithoutPassword });
+//   } catch (error) {
+//     return next(error);
+//   }
+// });
+
+
+// exports.searchUsers = asyncErrorHandler(async (req, res, next) => {
+//   const { name } = req.query; // Change the query parameter name to a more general one, like "name"
+//   if (!name) {
+//     return next(BadRequest("Name parameter is required"));
+//   }
+  
+//   const nameEscape = escapeRegex(name);
+//   try {
+//     const users = await Users.findAll({
+//       where: {
+//         [Op.or]: [
+//           { first_name: nameEscape },
+//           { last_name: nameEscape },
+//           { email: name },
+//           { mobile: nameEscape },
+//         ],
+//       },
+//     });
+
+//     if (users.length === 0) {
+//       return next(NotFound("No user found!"));
+//     }
+//     return successResponse(res, { data: { users } });
+//   } catch (error) {
+//     return next(error);
+//   }
+// });
+
+exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
+  const { search } = req.query;
+
+  if (search) {
+    const searchEscape = escapeRegex(search);
+    try {
+      const users = await Users.findAll({
+        where: {
+          [Op.or]: [
+            { first_name: searchEscape },
+            { last_name: searchEscape },
+            { email: search },
+            { mobile: searchEscape },
+          ],
+        },
+      });
+      if (users.length === 0) {
+        return next(NotFound("No user found!"));
+      }
+      return successResponse(res, { data: { users } });
+    } catch (error) {
+      return next(error);
+    }
+  } else {
+    // Fetch users by role "user"
+    try {
+      const users = await Users.findAll({
+        where: {
+          role: "user",
+        },
+      });
+
+      if (users.length === 0) {
+        return next(NotFound("No users with role 'user' found"));
+      }
+
+      const usersWithoutPassword = users.map((user) => {
+        const userWithoutPassword = { ...user.get() };
+        delete userWithoutPassword.password;
+        return userWithoutPassword;
+      });
+
+      return res.json({ users: usersWithoutPassword });
+    } catch (error) {
+      return next(error);
+    }
+  }
+});
+
+
+exports.deleteUser = asyncErrorHandler(async (req, res, next) => {
+  try {
+    const userId = req.params.id; // Assuming the user ID is passed as a route parameter
+    const user = await Users.findByPk(userId);
+
+    if (!user) {
+      return next(NotFound("User not found"));
+    }
+
+    await user.destroy();
+    return res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    return next(error);
+  }
 });
