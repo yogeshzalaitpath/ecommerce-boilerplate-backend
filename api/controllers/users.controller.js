@@ -70,16 +70,16 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
   console.log("page", page);
 
   const parsedLimit = parseInt(limit) || 10;
-  const parsedPage = parseInt(page) || 1
+  const parsedPage = parseInt(page) || 1;
   if (isNaN(parsedLimit) || parsedLimit <= 0) {
-    return next(BadRequest("Invalid limit parameter!"));
+    return next(BadRequest("Invalid limit parameter !"));
   }
   const offset = (parsedPage - 1) * parsedLimit;
   try {
     const searchTerms = search?.split(" ");
     const { rows: users, count: totalUsers } = await Users.findAndCountAll({
       limit: parsedLimit,
-      offset:offset,
+      offset: offset,
       attributes: {
         exclude: ["password"],
       },
@@ -100,15 +100,17 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
                   { last_name: { [Op.like]: `%${searchTerms[0]}%` } },
                 ],
               },
-              { email: { [Op.like]: `${search}%` } },
-              { mobile: { [Op.like]: `${search}%` } },
+              { email: { [Op.like]: `%${search}%` } },
+              { mobile: { [Op.like]: `%${search}%` } },
             ],
           },
         ],
       },
     });
 
-    return successResponse(res, { data: { users, totalUsers } });
+    return successResponse(res, {
+      data: { users, total_users: totalUsers, total_pages: parsedPage },
+    });
   } catch (error) {
     return next(error);
   }
