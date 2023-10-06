@@ -15,7 +15,7 @@ const userAuth = asyncErrorHandler(async (req, res, next) => {
     return next(UnAuthorized());
   }
 
-  const user = await Users.findOne({ _id: decodedToken.id }, { password: 0 });
+  const user = await Users.findOne({where:{ id: decodedToken.id }});
   if (!user) {
     return next(UnAuthorized());
   }

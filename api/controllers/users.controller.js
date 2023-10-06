@@ -65,10 +65,9 @@ exports.signIn = asyncErrorHandler(async (req, res, next) => {
 });
 
 exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
-  const { search, limit, page } = req.query;
-  console.log("limit", limit);
-  console.log("page", page);
-
+  const { search, limit, page, filter } = req.query;
+  console.log("filter", filter);
+  const gender = filter;
   const parsedLimit = parseInt(limit) || 10;
   const parsedPage = parseInt(page) || 1;
   if (isNaN(parsedLimit) || parsedLimit <= 0) {
@@ -80,12 +79,14 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
     const { rows: users, count: totalUsers } = await Users.findAndCountAll({
       limit: parsedLimit,
       offset: offset,
+
       attributes: {
         exclude: ["password"],
       },
       where: {
         [Op.and]: [
           { role: "user" },
+          gender ? { gender: gender } : {},
           {
             [Op.or]: [
               {
@@ -108,8 +109,10 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
       },
     });
 
+    const total_pages = Math.ceil(totalUsers / parsedLimit);
+
     return successResponse(res, {
-      data: { users, total_users: totalUsers, total_pages: parsedPage },
+      data: { users, total_users: totalUsers, total_pages: total_pages },
     });
   } catch (error) {
     return next(error);
@@ -118,16 +121,54 @@ exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
 
 exports.deleteUser = asyncErrorHandler(async (req, res, next) => {
   try {
-    const userId = req.params.id; // Assuming the user ID is passed as a route parameter
+    const { userId } = req.params; // Extract userId directly from req.params
+    console.log('userId', userId);
+
     const user = await Users.findByPk(userId);
 
     if (!user) {
-      return next(NotFound("User not found"));
+      return next(NotFound("User doesn't exist !"));
     }
 
-    await user.destroy();
-    return res.json({ message: "User deleted successfully" });
+    await Users.destroy({
+      where: {
+        id: userId
+      }
+    });
+    return successResponse(res, {
+      message: "User deleted successfully",
+    });
   } catch (error) {
     return next(error);
   }
+});
+
+
+exports.editProfile = asyncErrorHandler(async (req, res, next) => {
+  const { first_name, last_name, gender, mobile, address, profile_image } =
+    req.body;
+  const userId = req.user.id;
+  console.log("userId", userId);
+
+  let user = await Users.findByPk(userId);
+
+  if (!user) {
+    return next(NotFound("User doesn't exist !"));
+  }
+
+  // Update user profile fields
+  user.first_name = first_name;
+  user.last_name = last_name;
+  user.gender = gender;
+  user.mobile = mobile;
+  user.address = address;
+  user.profile_image = profile_image;
+  // Save the updated user profile
+  await user.save();
+
+  return successResponse(
+    res,
+    { message: "Profile updated successfully!" },
+    201
+  );
 });
