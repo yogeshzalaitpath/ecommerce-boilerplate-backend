@@ -15,7 +15,7 @@ router
   .route("/sign-in")
   .post(validate(usersValidation.signIn), usersController.signIn);
 
-router.route("/:userId").get(userAuth,usersController.getAllUsers).delete(userAuth,usersController.deleteUser);
+router.route("/:userId?").get(userAuth,usersController.getAllUsers).delete(userAuth,usersController.deleteUser);
 
 router.route("/profile").put(userAuth,usersController.editProfile);
 
