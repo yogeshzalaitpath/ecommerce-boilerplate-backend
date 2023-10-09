@@ -13,6 +13,10 @@ const { where, Op } = require("sequelize");
 const { generateToken } = require("../helpers/jwt.helper");
 const { ROLES } = require("../utils/constant");
 const { escapeRegex } = require("../helpers/global.helper");
+const {
+  extractPublicIdFromUrl,
+  deleteImageFromCloudinary,
+} = require("../helpers/cloudinary.helper");
 
 exports.signUp = asyncErrorHandler(async (req, res, next) => {
   const { first_name, last_name, email, password, role } = req.body;
@@ -145,10 +149,19 @@ exports.deleteUser = asyncErrorHandler(async (req, res, next) => {
 
 
 exports.editProfile = asyncErrorHandler(async (req, res, next) => {
-  const { first_name, last_name, gender, mobile, address, profile_image } =
+  const { first_name, last_name, gender, mobile, address } =
     req.body;
+  let profile_image = req.user.profile_image;
+  if (req.file) {
+    if (profile_image) {
+      const publicId = extractPublicIdFromUrl(profile_image);
+      await deleteImageFromCloudinary(`profiles/${publicId}`);
+    }
+    profile_image = req.file.path;
+  }
+  console.log('profile_image', profile_image)
   const userId = req.user.id;
-  console.log("userId", userId);
+  // console.log("userId", userId);
 
   let user = await Users.findByPk(userId);
 

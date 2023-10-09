@@ -8,8 +8,18 @@ const escapeRegex = (text) => {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
 };
 
+const fileNameGenerator = (user, fieldNames) => {
+  const values = fieldNames.map(fieldName => user[fieldName]);
+  if (values.every(value => value !== undefined)) {
+      const fileName = values.join('-').toLowerCase();
+      return fileName;
+  } else {
+      throw new Error('Invalid field names provided');
+  }
+};
 
 module.exports = {
   capitalizeFirstLetter,
-  escapeRegex
+  escapeRegex,
+  fileNameGenerator
 };

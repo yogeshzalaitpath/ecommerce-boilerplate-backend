@@ -6,6 +6,7 @@ const usersValidation = require("../validations/users.validation");
 
 const usersController = require("../controllers/users.controller");
 const userAuth = require("../middlewares/userAuth.middleware");
+const { profileUpload } = require("../middlewares/imageupload.Middleware");
 
 router
   .route("/sign-up")
@@ -17,6 +18,6 @@ router
 
 router.route("/:userId?").get(userAuth,usersController.getAllUsers).delete(userAuth,usersController.deleteUser);
 
-router.route("/profile").put(userAuth,usersController.editProfile);
+router.route("/profile").put(userAuth, profileUpload.single("profile_image"),usersController.editProfile);
 
 module.exports = router;
